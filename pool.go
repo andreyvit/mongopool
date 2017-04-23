@@ -120,7 +120,9 @@ func (pool *Pool) connect() error {
 		return err
 	}
 
-	session.SetMode(mgo.Monotonic, true)
+	if pool.Configure != nil {
+		pool.Configure(session)
+	}
 
 	pool.db = session.DB(pool.DatabaseName)
 	if pool.connected != nil {
