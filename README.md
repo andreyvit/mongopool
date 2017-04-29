@@ -8,9 +8,12 @@ See [docs on godoc.org](https://godoc.org/github.com/andreyvit/mongopool).
 ## Example
 
 ```go
+package main
+
 import (
     "log"
     "os"
+    "sync"
     "time"
 
     "github.com/andreyvit/mongopool"
@@ -18,7 +21,7 @@ import (
     "gopkg.in/mgo.v2/bson"
 )
 
-func Example() {
+func main() {
     mpool := mongopool.Dial(os.Getenv("MONGO_URI"), mongopool.Options{
         Concurrency: 10,
         Configure: func(session *mgo.Session) {
@@ -28,12 +31,16 @@ func Example() {
     })
     defer mpool.Close()
 
+    var wg sync.WaitGroup
     for i := 0; i < 100; i++ {
-        go handle(i, mpool)
+        wg.Add(1)
+        go Handle(i, mpool, wg.Done)
     }
+    wg.Wait()
 }
 
-func Handle(idx int, mpool *mongopool.Pool) {
+func Handle(idx int, mpool *mongopool.Pool, done func()) {
+    defer done()
     err := handle(idx, mpool)
     if err != nil {
         log.Printf("ERROR (worker %d): %v", idx, err)
