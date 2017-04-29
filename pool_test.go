@@ -3,6 +3,7 @@ package mongopool_test
 import (
 	"log"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/andreyvit/mongopool"
@@ -20,12 +21,16 @@ func Example() {
 	})
 	defer mpool.Close()
 
+	var wg sync.WaitGroup
 	for i := 0; i < 100; i++ {
-		go Handle(i, mpool)
+		wg.Add(1)
+		go Handle(i, mpool, wg.Done)
 	}
+	wg.Wait()
 }
 
-func Handle(idx int, mpool *mongopool.Pool) {
+func Handle(idx int, mpool *mongopool.Pool, done func()) {
+	defer done()
 	err := handle(idx, mpool)
 	if err != nil {
 		log.Printf("ERROR (worker %d): %v", idx, err)
