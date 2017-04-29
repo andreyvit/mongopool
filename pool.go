@@ -1,4 +1,4 @@
-// mongopool provides a concurrency limit and automatic reconnection for mgo
+// Package mongopool adds a concurrency limit and automatic reconnection to mgo sessions.
 package mongopool
 
 import (
@@ -11,8 +11,10 @@ import (
 	"gopkg.in/mgo.v2"
 )
 
+// ErrNotConfigured is returned when the pool is created with an empty URI.
 var ErrNotConfigured = errors.New("MongoDB connection has not been configured")
 
+// Printfer allows for any logger that implement Printf
 type Printfer interface {
 	Printf(format string, v ...interface{})
 }
@@ -61,6 +63,7 @@ type Pool struct {
 	masterState uint32 // 0 disconnected, 1 connected, access via atomic operations only
 }
 
+// Error wraps errors returned by the pool
 type Error struct {
 	Msg        string
 	Underlying error
@@ -123,6 +126,7 @@ func Dial(uri string, opt Options) *Pool {
 	return pool
 }
 
+// String returns the name of this pool.
 func (pool *Pool) String() string {
 	return pool.name
 }
@@ -139,6 +143,7 @@ func (pool *Pool) StatusString() string {
 	return fmt.Sprintf("%s, free=%d, total=%d, max=%d", masterState, pool.nfree, pool.total, pool.max)
 }
 
+// IsOnline returns whether the pool currently has a functional MongoDB connection.
 func (pool *Pool) IsOnline() bool {
 	return atomic.LoadUint32(&pool.masterState) == 1
 }
@@ -162,15 +167,17 @@ func (pool *Pool) destroyAll() {
 	}
 }
 
-// Acquire obtains a new session from the pool, establishing one if necessary. If Concurrency sessions are already in use, Acquire blocks until other goroutine calls Release.
-//
-// The caller must subsequently call Release with the return value of this method:
-//
-//   db, err := pool.Acquire()
-//   if err != nil {
-//       return err
-//   }
-//   defer pool.Release(db)
+/*
+	Acquire obtains a new session from the pool, establishing one if necessary. If Concurrency sessions are already in use, Acquire blocks until other goroutine calls Release.
+
+	The caller must subsequently call Release with the return value of this method, for example:
+
+		db, err := pool.Acquire()
+		if err != nil {
+			return err
+		}
+		defer pool.Release(db)
+*/
 func (pool *Pool) Acquire() (*mgo.Database, error) {
 	// obtain a connection before locking pool.mut, so that we don't stay locked for the entire duration of mgo.Dial
 	conn := pool.obtainMaster()
