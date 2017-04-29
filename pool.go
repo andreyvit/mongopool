@@ -221,7 +221,9 @@ func (pool *Pool) Acquire() (*mgo.Database, error) {
 	for {
 		pool.cond.Wait()
 		if db := pool.dequeue(); db != nil {
-			pool.opt.Logger.Printf("mongopool %s: acquired connection from free list with waiting (%p), %s", pool, db, pool.StatusString())
+			if pool.opt.Logger != nil {
+				pool.opt.Logger.Printf("mongopool %s: acquired connection from free list with waiting (%p), %s", pool, db, pool.StatusString())
+			}
 			return db, nil
 		}
 	}
